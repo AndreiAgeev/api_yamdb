@@ -1,5 +1,3 @@
-from django.shortcuts import get_object_or_404
-from django.http import Http404
 from rest_framework import status
 from rest_framework.mixins import CreateModelMixin
 from rest_framework.permissions import AllowAny
@@ -26,13 +24,12 @@ class SignUpViewSet(CreateModelMixin, GenericViewSet):
         существует, то сериализатор обновляет его confirmation_code
         """
         try:
-            user = get_object_or_404(
-                User,
+            user = User.objects.get(
                 username=request.data.get('username'),
                 email=request.data.get('email')
             )
             serializer = self.get_serializer(user, data=request.data)
-        except Http404:
+        except User.DoesNotExist:
             serializer = self.get_serializer(data=request.data)
 
         serializer.is_valid(raise_exception=True)
