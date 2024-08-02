@@ -1,7 +1,10 @@
 from random import randint
 
 from django.core.mail import send_mail
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainSerializer
+from rest_framework_simplejwt.tokens import AccessToken
 
 from reviews.models import User
 
@@ -55,3 +58,26 @@ class SignUpSerializer(serializers.ModelSerializer):
             fail_silently=False
         )
         return confirmation_code
+
+
+class GetTokenSerializer(TokenObtainSerializer):
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.fields[self.username_field] = serializers.CharField(
+            write_only=True
+        )
+        self.fields['confirmation_code'] = serializers.IntegerField()
+        self.fields['password'] = serializers.CharField(read_only=True)
+
+    def validate(self, data):
+        user = get_object_or_404(User, username=data['username'])
+        if data['confirmation_code'] != user.confirmation_code:
+            raise serializers.ValidationError('Неверный код подтверждения')
+        data['token'] = str(self.get_token(user))
+        return data
+
+    @classmethod
+    def get_token(cls, user):
+        return AccessToken.for_user(user)

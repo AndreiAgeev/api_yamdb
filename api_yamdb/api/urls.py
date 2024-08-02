@@ -10,5 +10,6 @@ router = DefaultRouter()
 router.register('auth/signup', views.SignUpViewSet)
 
 urlpatterns = [
-    path(f'{api_ver}/', include(router.urls))
+    path(f'{api_ver}/', include(router.urls)),
+    path(f'{api_ver}/auth/token/', views.GetTokenView.as_view()),
 ]
