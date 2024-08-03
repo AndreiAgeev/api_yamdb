@@ -25,6 +25,23 @@ class UserStaffOrReadOnly(permissions.BasePermission):
         )
 
 
+class AdminOrReadOnly(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        return (
+            request.method in permissions.SAFE_METHODS
+            or request.user.role == STAFF_ROLES[1]
+            or request.user.is_superuser
+        )
+
+    def has_object_permission(self, request, view, obj):
+        return (
+            request.method in permissions.SAFE_METHODS
+            or request.user.role == STAFF_ROLES[1]
+            or request.user.is_superuser
+        )
+
+
 class AdminOnly(permissions.BasePermission):
     """Даёт доступ только для админов"""
 
@@ -33,7 +50,7 @@ class AdminOnly(permissions.BasePermission):
             return False
 
         return (
-            request.user.role == 'admin'
+            request.user.role == STAFF_ROLES[1]
             or request.user.is_superuser
         )
 
@@ -42,6 +59,6 @@ class AdminOnly(permissions.BasePermission):
             return False
 
         return (
-            request.user.role == 'admin'
+            request.user.role == STAFF_ROLES[1]
             or request.user.is_superuser
         )

@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from . import pagination, permisions, serializers
+from . import permisions, serializers
 from reviews.models import User
 
 
@@ -70,7 +70,6 @@ class AdminViewSet(ModelViewSet):
     permission_classes = (permisions.AdminOnly,)
     filter_backends = (SearchFilter,)
     search_fields = ('username',)
-    pagination_class = pagination.UsersListPagination
     http_method_names = ('get', 'post', 'patch', 'delete', 'head')
     lookup_field = 'username'
 
