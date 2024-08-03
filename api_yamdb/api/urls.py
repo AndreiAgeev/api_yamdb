@@ -7,9 +7,15 @@ from . import views
 api_ver = 'v1'
 
 router = DefaultRouter()
+router.register('users', views.AdminViewSet)
 router.register('auth/signup', views.SignUpViewSet)
 
+print(router.urls)
 urlpatterns = [
+    path(f'{api_ver}/users/me/', views.UserViewSet.as_view({
+        'get': 'retrieve',
+        'patch': 'partial_update',
+    })),
     path(f'{api_ver}/', include(router.urls)),
     path(f'{api_ver}/auth/token/', views.GetTokenView.as_view()),
 ]

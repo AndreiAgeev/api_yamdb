@@ -1,12 +1,15 @@
 from rest_framework import status
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from rest_framework.mixins import CreateModelMixin
-from rest_framework.permissions import AllowAny
+from rest_framework.filters import SearchFilter
+from rest_framework.mixins import (CreateModelMixin,
+                                   RetrieveModelMixin,
+                                   UpdateModelMixin)
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from . import serializers
+from . import pagination, permisions, serializers
 from reviews.models import User
 
 
@@ -23,7 +26,7 @@ class SignUpViewSet(CreateModelMixin, GenericViewSet):
         В случае, если пользователя с заданными username и email
         не существует, то происходит его создание.
         В случае, если пользователь с заданными username и email
-        существует, то сериализатор обновляет его confirmation_code
+        существует, то сериализатор обновляет его confirmation_code.
         """
         try:
             user = User.objects.get(
@@ -43,6 +46,7 @@ class SignUpViewSet(CreateModelMixin, GenericViewSet):
 
 
 class GetTokenView(TokenObtainPairView):
+    """ViewSet для получения токенов."""
     serializer_class = serializers.GetTokenSerializer
     permission_classes = (AllowAny,)
 
@@ -57,3 +61,33 @@ class GetTokenView(TokenObtainPairView):
             {'token': serializer.validated_data['token']},
             status=status.HTTP_200_OK
         )
+
+
+class AdminViewSet(ModelViewSet):
+    """ViewSet для функционала админов."""
+    queryset = User.objects.all()
+    serializer_class = serializers.AdminUsersSerializer
+    permission_classes = (permisions.AdminOnly,)
+    filter_backends = (SearchFilter,)
+    search_fields = ('username',)
+    pagination_class = pagination.UsersListPagination
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head')
+    lookup_field = 'username'
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        user.set_unusable_password()
+        user.save()
+
+
+class UserViewSet(RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
+    """ViewSet для просмотра пользователем своих данных."""
+    serializer_class = serializers.UserSerializer
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ('get', 'patch')
+
+    def get_queryset(self):
+        return self.request.user
+
+    def get_object(self):
+        return self.request.user
