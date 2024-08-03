@@ -9,6 +9,9 @@ api_ver = 'v1'
 router = DefaultRouter()
 router.register('users', views.AdminViewSet)
 router.register('auth/signup', views.SignUpViewSet)
+router.register('titles', views.TitleViewSet)
+router.register('genres', views.GenreViewSet)
+router.register('categories', views.CategoryViewSet)
 
 print(router.urls)
 urlpatterns = [

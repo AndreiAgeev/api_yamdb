@@ -1,16 +1,20 @@
-from rest_framework import status
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status, viewsets
 from rest_framework.filters import SearchFilter
 from rest_framework.mixins import (CreateModelMixin,
                                    RetrieveModelMixin,
                                    UpdateModelMixin)
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from .filters import TitleFilter
+from .mixin import CreateListDestroyMixin
 from . import permisions, serializers
-from reviews.models import User
+from reviews.models import Category, Genre, Title, User
 
 
 class SignUpViewSet(CreateModelMixin, GenericViewSet):
@@ -90,3 +94,36 @@ class UserViewSet(RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
 
     def get_object(self):
         return self.request.user
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.all()
+    permission_classes = (AllowAny,)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = TitleFilter
+    pagination_class = LimitOffsetPagination
+
+    def get_serializer_class(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            return serializers.TitleListSerializer
+        return serializers.TitleFullSerializer
+
+
+class BaseForGenreAndCategoryViewSet(
+    CreateListDestroyMixin, viewsets.GenericViewSet
+):
+    permission_classes = (AllowAny,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    pagination_class = LimitOffsetPagination
+    lookup_field = 'slug'
+
+
+class GenreViewSet(BaseForGenreAndCategoryViewSet):
+    queryset = Genre.objects.all()
+    serializer_class = serializers.GenreSerializer
+
+
+class CategoryViewSet(BaseForGenreAndCategoryViewSet):
+    queryset = Category.objects.all()
+    serializer_class = serializers.CategorySerializer
