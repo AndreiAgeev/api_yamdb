@@ -40,6 +40,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         # Если при изменении отзыва пришла оценка, делаю перерасчет
         if 'score' in request.data:
+            super().partial_update(request, *args, **kwargs)
             self.rating_calculating()
         return super().partial_update(request, *args, **kwargs)
 
@@ -51,8 +52,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
             title_rating = reviews.aggregate(average=Avg('score'))['average']
             title.rating = title_rating
             title.save()
-            return title_rating
-        return 0
 
 
 class CommentViewSet(viewsets.ModelViewSet):
