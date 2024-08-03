@@ -10,9 +10,29 @@ from rest_framework_simplejwt.serializers import TokenObtainSerializer
 from rest_framework_simplejwt.tokens import AccessToken
 
 from reviews.models import User
+from .permisions import STAFF_ROLES
 
 
-class SignUpSerializer(serializers.ModelSerializer):
+class ValidateUsernameMixin:
+    """Миксин, запрещающий пользователю создать username "me"."""
+
+    def validate_username(self, value):
+        if value.lower() == 'me':
+            raise serializers.ValidationError(
+                'Username me невозможно использовать.'
+            )
+        return value
+
+
+class BaseUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'first_name',
+                  'last_name', 'bio', 'role')
+
+
+class SignUpSerializer(ValidateUsernameMixin, serializers.ModelSerializer):
     """Сериализатор для эндпоинта api/v1/auth/signup/"""
 
     class Meta:
@@ -41,11 +61,6 @@ class SignUpSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-    def validate_username(self, value):
-        if value == 'me':
-            raise serializers.ValidationError('Unacceptable username')
-        return value
-
     def send_code(self, recipient_email):
         """Отвечает за создание кода подтверждения и отправку писем.
         Функция randint создаёт 6-значный код.
@@ -64,6 +79,7 @@ class SignUpSerializer(serializers.ModelSerializer):
 
 
 class GetTokenSerializer(TokenObtainSerializer):
+    """Сериализатор для получения пользователем Access Token."""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -84,6 +100,27 @@ class GetTokenSerializer(TokenObtainSerializer):
     @classmethod
     def get_token(cls, user):
         return AccessToken.for_user(user)
+
+
+class AdminUsersSerializer(ValidateUsernameMixin, BaseUserSerializer):
+    """Позоволяет админу взаимодейстовать с данными пользователей"""
+
+    class Meta(BaseUserSerializer.Meta):
+        read_only_fields = ('password',)
+
+    def update(self, instance, validated_data):
+        super().update(instance, validated_data)
+        if validated_data['role'] in STAFF_ROLES:
+            instance.is_staff = True
+            instance.save()
+        return instance
+
+
+class UserSerializer(ValidateUsernameMixin, BaseUserSerializer):
+    """Позволяет пользователю взаимодействовать со своими данными."""
+
+    class Meta(BaseUserSerializer.Meta):
+        read_only_fields = ('password', 'role')
     
     
 class CategorySerializer(serializers.ModelSerializer):
