@@ -6,19 +6,15 @@ from reviews.models import Category, Genre, Title
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
-        fields = (
-            'name', 'slug'
-        )
         model = Category
+        fields = ('name', 'slug')
         lookup_field = 'slug',
 
 
 class GenreSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = (
-            'name', 'slug'
-        )
         model = Genre
+        fields = ('name', 'slug')
         lookup_field = 'slug',
 
 

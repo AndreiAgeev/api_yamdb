@@ -1,9 +1,8 @@
-from rest_framework import viewsets, mixins
+from rest_framework import mixins
 
 
 class CreateListDestroyMixin(mixins.CreateModelMixin,
                              mixins.ListModelMixin,
-                             mixins.DestroyModelMixin,
-                             viewsets.GenericViewSet):
+                             mixins.DestroyModelMixin):
     "Кастомный миксин класс"
     pass
