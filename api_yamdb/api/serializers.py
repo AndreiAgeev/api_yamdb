@@ -14,7 +14,7 @@ class ValidateUsernameMixin:
     """Миксин, запрещающий пользователю создать username "me"."""
 
     def validate_username(self, value):
-        if value == 'me':
+        if value.lower() == 'me':
             raise serializers.ValidationError(
                 'Username me невозможно использовать.'
             )
