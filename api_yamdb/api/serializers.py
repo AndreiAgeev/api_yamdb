@@ -1,15 +1,13 @@
 from random import randint
 from datetime import datetime
-from rest_framework import serializers
 
-from reviews.models import Category, Genre, Title
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainSerializer
 from rest_framework_simplejwt.tokens import AccessToken
 
-from reviews.models import User, Title, Reviews, Comments
+from reviews.models import Category, Comments, Genre, Reviews, Title, User
 from .permisions import STAFF_ROLES
 
 
@@ -110,7 +108,7 @@ class AdminUsersSerializer(ValidateUsernameMixin, BaseUserSerializer):
 
     def update(self, instance, validated_data):
         super().update(instance, validated_data)
-        if validated_data['role'] in STAFF_ROLES:
+        if validated_data.get('role') in STAFF_ROLES:
             instance.is_staff = True
             instance.save()
         return instance

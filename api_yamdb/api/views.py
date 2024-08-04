@@ -124,11 +124,13 @@ class BaseForGenreAndCategoryViewSet(
 class GenreViewSet(BaseForGenreAndCategoryViewSet):
     queryset = Genre.objects.all()
     serializer_class = serializers.GenreSerializer
+    permission_classes = (permisions.AdminOrReadOnly,)
 
 
 class CategoryViewSet(BaseForGenreAndCategoryViewSet):
     queryset = Category.objects.all()
     serializer_class = serializers.CategorySerializer
+    permission_classes = (permisions.AdminOrReadOnly,)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -136,7 +138,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     serializer_class = serializers.ReviewSerializer
     pk_url_kwarg = 'review_id'
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = (permisions.UserStaffOrReadOnly,)
     pagination_class = LimitOffsetPagination
 
     def get_title(self):
@@ -180,7 +182,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     """Класс обработки комментариев."""
 
     serializer_class = serializers.CommentSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = (permisions.UserStaffOrReadOnly,)
 
     def get_review(self):
         """Забираю отзыв."""

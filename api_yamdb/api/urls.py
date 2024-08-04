@@ -24,7 +24,6 @@ router.register(
 )
 
 
-print(router.urls)
 urlpatterns = [
     path(f'{api_ver}/users/me/', views.UserViewSet.as_view({
         'get': 'retrieve',
