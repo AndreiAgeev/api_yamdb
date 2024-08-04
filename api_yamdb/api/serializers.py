@@ -1,15 +1,15 @@
 from random import randint
 from datetime import datetime
-from rest_framework import serializers
 
-from reviews.models import Category, Genre, Title
 from django.core.mail import send_mail
+from django.db.utils import IntegrityError
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainSerializer
 from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.exceptions import ValidationError
 
-from reviews.models import User, Title, Reviews, Comments
+from reviews.models import Category, Comments, Genre, Review, Title, User
 from .permisions import STAFF_ROLES
 
 
@@ -110,7 +110,7 @@ class AdminUsersSerializer(ValidateUsernameMixin, BaseUserSerializer):
 
     def update(self, instance, validated_data):
         super().update(instance, validated_data)
-        if validated_data['role'] in STAFF_ROLES:
+        if validated_data.get('role') in STAFF_ROLES:
             instance.is_staff = True
             instance.save()
         return instance
@@ -140,12 +140,12 @@ class GenreSerializer(serializers.ModelSerializer):
 class TitleFullSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(
         queryset=Category.objects.all(),
-        slug_field='name'
+        slug_field='slug'
     )
     genre = serializers.SlugRelatedField(
         queryset=Genre.objects.all(),
         many=True,
-        slug_field='name'
+        slug_field='slug'
     )
 
     class Meta:
@@ -173,7 +173,7 @@ class TitleListSerializer(serializers.ModelSerializer):
         model = Title
 
 
-class AuthorMixinForSerializer(serializers.ModelSerializer):
+class AuthorForReviewAndCommentSerializer(serializers.ModelSerializer):
     """Миксин для переопределения поля автора."""
 
     author = serializers.SlugRelatedField(
@@ -182,21 +182,29 @@ class AuthorMixinForSerializer(serializers.ModelSerializer):
         slug_field='username')
 
 
-class CommentSerializer(AuthorMixinForSerializer):
+class CommentSerializer(AuthorForReviewAndCommentSerializer):
     """Сериализатор для комментариев."""
 
     class Meta:
         """Мета."""
 
         model = Comments
-        fields = '__all__'
+        fields = ('id', 'text', 'author', 'pub_date')
 
 
-class ReviewSerializer(AuthorMixinForSerializer):
+class ReviewSerializer(AuthorForReviewAndCommentSerializer):
     """Сериализатор для отзывов."""
 
     class Meta:
         """Мета."""
 
-        model = Reviews
-        fields = '__all__'
+        model = Review
+        fields = fields = ('id', 'text', 'author', 'score', 'pub_date')
+
+    def create(self, validated_data):
+        """Переопределяю create для обработки IntegrityError."""
+        try:
+            return super().create(validated_data)
+        except IntegrityError:
+            raise ValidationError(
+                'Нельзя оставить более одного отзыва одним автором')
