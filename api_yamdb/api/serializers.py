@@ -9,7 +9,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainSerializer
 from rest_framework_simplejwt.tokens import AccessToken
 
-from reviews.models import User
+from reviews.models import User, Title, Reviews, Comments
 from .permisions import STAFF_ROLES
 
 
@@ -121,8 +121,8 @@ class UserSerializer(ValidateUsernameMixin, BaseUserSerializer):
 
     class Meta(BaseUserSerializer.Meta):
         read_only_fields = ('password', 'role')
-    
-    
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
@@ -171,3 +171,32 @@ class TitleListSerializer(serializers.ModelSerializer):
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
         model = Title
+
+
+class AuthorMixinForSerializer(serializers.ModelSerializer):
+    """Миксин для переопределения поля автора."""
+
+    author = serializers.SlugRelatedField(
+        read_only=True,
+        default=serializers.CurrentUserDefault(),
+        slug_field='username')
+
+
+class CommentSerializer(AuthorMixinForSerializer):
+    """Сериализатор для комментариев."""
+
+    class Meta:
+        """Мета."""
+
+        model = Comments
+        fields = '__all__'
+
+
+class ReviewSerializer(AuthorMixinForSerializer):
+    """Сериализатор для отзывов."""
+
+    class Meta:
+        """Мета."""
+
+        model = Reviews
+        fields = '__all__'

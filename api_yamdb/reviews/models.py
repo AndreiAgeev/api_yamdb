@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 USER_ROLES = (
@@ -72,3 +73,45 @@ class Title(models.Model):
     class Meta:
         verbose_name = 'произведение'
         verbose_name_plural = 'Произведения'
+
+
+class Reviews(models.Model):
+    """Модель для отзывов."""
+
+    text = models.TextField('Текст отзыва')
+    score = models.PositiveIntegerField(
+        'Оценка',
+        validators=[
+            MinValueValidator(0),
+            MaxValueValidator(10)
+        ])
+    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+    title = models.ForeignKey(
+        Title, on_delete=models.CASCADE, related_name='reviews')
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='reviews')
+
+    def __str__(self):
+        return self.text
+
+    class Meta:
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+
+
+class Comments(models.Model):
+    """Модель для отзывов."""
+
+    text = models.TextField('Текст комментария')
+    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='comments')
+    review = models.ForeignKey(
+        Reviews, on_delete=models.CASCADE, related_name='comments')
+
+    def __str__(self):
+        return self.text
+
+    class Meta:
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
