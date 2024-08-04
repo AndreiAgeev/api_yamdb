@@ -7,8 +7,7 @@ from rest_framework.mixins import (CreateModelMixin,
                                    RetrieveModelMixin,
                                    UpdateModelMixin)
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import (
-    AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly)
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
@@ -17,7 +16,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .filters import TitleFilter
 from .mixin import CreateListDestroyMixin
 from . import permisions, serializers
-from reviews.models import Category, Genre, Title, User, Reviews
+from reviews.models import Category, Genre, Reviews, Title, User
 
 
 class SignUpViewSet(CreateModelMixin, GenericViewSet):
