@@ -75,11 +75,11 @@ class Title(models.Model):
         verbose_name_plural = 'Произведения'
 
 
-class Reviews(models.Model):
+class Review(models.Model):
     """Модель для отзывов."""
 
     text = models.TextField('Текст отзыва')
-    score = models.PositiveIntegerField(
+    score = models.IntegerField(
         'Оценка',
         validators=[
             MinValueValidator(0),
@@ -98,6 +98,12 @@ class Reviews(models.Model):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
 
+        # Ограничение - автор пишет только 1 отзыв на произведение
+        constraints = [
+            models.UniqueConstraint(
+                fields=['title', 'author'], name='unique_reviews'),
+        ]
+
 
 class Comments(models.Model):
     """Модель для отзывов."""
@@ -107,7 +113,7 @@ class Comments(models.Model):
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='comments')
     review = models.ForeignKey(
-        Reviews, on_delete=models.CASCADE, related_name='comments')
+        Review, on_delete=models.CASCADE, related_name='comments')
 
     def __str__(self):
         return self.text

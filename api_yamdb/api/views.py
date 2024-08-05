@@ -16,7 +16,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .filters import TitleFilter
 from .mixin import CreateListDestroyMixin
 from . import permisions, serializers
-from reviews.models import Category, Genre, Reviews, Title, User
+from reviews.models import Category, Genre, Review, Title, User
 
 
 class SignUpViewSet(CreateModelMixin, GenericViewSet):
@@ -162,11 +162,19 @@ class ReviewViewSet(viewsets.ModelViewSet):
         self.rating_calculating()
 
     def partial_update(self, request, *args, **kwargs):
-        # Если при изменении отзыва пришла оценка, делаю перерасчет
+        # Если при изменении отзыва (patch) пришла оценка -> перерасчет
         if 'score' in request.data:
             super().partial_update(request, *args, **kwargs)
             self.rating_calculating()
         return super().partial_update(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        # Запрет PUT-запросов
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        else:
+            # Разрешение PATCH-запросов
+            return super().update(request, *args, **kwargs)
 
     def rating_calculating(self):
         """Пересчет рейтинга произведения."""
@@ -183,21 +191,26 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     serializer_class = serializers.CommentSerializer
     permission_classes = (permisions.UserStaffOrReadOnly,)
+    pagination_class = LimitOffsetPagination
+    pk_url_kwarg = 'comment_id'
 
     def get_review(self):
-        """Забираю отзыв."""
+        # Забираю отзыв.
         review_id = self.kwargs['review_id']
-        return get_object_or_404(Reviews, pk=review_id)
+        return get_object_or_404(Review, pk=review_id)
 
     def get_queryset(self):
         review = self.get_review()
-        return review.comments.all()
+        return review.comments.select_related('author')
 
     def perform_create(self, serializer):
         review = self.get_review()
         serializer.save(author=self.request.user, review=review)
 
-    def get_object(self):
-        comment_id = self.kwargs['comment_id']
-        review = self.get_review()
-        return get_object_or_404(review.comments, pk=comment_id)
+    def update(self, request, *args, **kwargs):
+        # Запрет PUT-запросов
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        else:
+            # Разрешение PATCH-запросов
+            return super().update(request, *args, **kwargs)
