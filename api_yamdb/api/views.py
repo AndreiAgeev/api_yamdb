@@ -21,6 +21,7 @@ from reviews.models import Category, Genre, Review, Title, User
 
 class SignUpViewSet(CreateModelMixin, GenericViewSet):
     """ViewSet, обслуживающий эндпоинт api/v1/auth/signup/."""
+
     queryset = User.objects.all()
     serializer_class = serializers.SignUpSerializer
     permission_classes = (AllowAny,)
@@ -53,6 +54,7 @@ class SignUpViewSet(CreateModelMixin, GenericViewSet):
 
 class GetTokenView(TokenObtainPairView):
     """ViewSet для получения токенов."""
+
     serializer_class = serializers.GetTokenSerializer
     permission_classes = (AllowAny,)
 
@@ -71,6 +73,7 @@ class GetTokenView(TokenObtainPairView):
 
 class AdminViewSet(ModelViewSet):
     """ViewSet для функционала админов."""
+
     queryset = User.objects.all()
     serializer_class = serializers.AdminUsersSerializer
     permission_classes = (permisions.AdminOnly,)
@@ -87,6 +90,7 @@ class AdminViewSet(ModelViewSet):
 
 class UserViewSet(RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
     """ViewSet для просмотра пользователем своих данных."""
+
     serializer_class = serializers.UserSerializer
     permission_classes = (IsAuthenticated,)
     http_method_names = ('get', 'patch')
@@ -104,6 +108,30 @@ class TitleViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     pagination_class = LimitOffsetPagination
+
+    def response_data(self, data):
+        """Заменяет в данных сериализатора поля genre и category,
+        добавляя туда объекты их сериализаторов."""
+        genres = data.pop('genre')
+        genre_list = list()
+        for genre in genres:
+            genre_obj = Genre.objects.get(slug=genre)
+            genre_list.append(serializers.GenreSerializer(genre_obj).data)
+        data['genre'] = genre_list
+        category = data.pop('category')
+        category_obj = Category.objects.get(slug=category)
+        data['category'] = serializers.CategorySerializer(category_obj).data
+        return data
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        response_data = self.response_data(serializer.data)
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            response_data, status=status.HTTP_201_CREATED, headers=headers
+        )
 
     def get_serializer_class(self):
         if self.action == 'list' or self.action == 'retrieve':
