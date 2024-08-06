@@ -77,6 +77,7 @@ class AdminViewSet(ModelViewSet):
     queryset = User.objects.all()
     serializer_class = serializers.AdminUsersSerializer
     permission_classes = (permisions.AdminOnly,)
+    pagination_class = LimitOffsetPagination
     filter_backends = (SearchFilter,)
     search_fields = ('username',)
     http_method_names = ('get', 'post', 'patch', 'delete', 'head')
@@ -94,6 +95,7 @@ class UserViewSet(RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
     serializer_class = serializers.UserSerializer
     permission_classes = (IsAuthenticated,)
     http_method_names = ('get', 'patch')
+    pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
         return self.request.user
