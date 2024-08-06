@@ -77,6 +77,7 @@ class AdminViewSet(ModelViewSet):
     queryset = User.objects.all()
     serializer_class = serializers.AdminUsersSerializer
     permission_classes = (permisions.AdminOnly,)
+    pagination_class = LimitOffsetPagination
     filter_backends = (SearchFilter,)
     search_fields = ('username',)
     http_method_names = ('get', 'post', 'patch', 'delete', 'head')
@@ -94,6 +95,7 @@ class UserViewSet(RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
     serializer_class = serializers.UserSerializer
     permission_classes = (IsAuthenticated,)
     http_method_names = ('get', 'patch')
+    pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
         return self.request.user
@@ -115,29 +117,29 @@ class TitleViewSet(viewsets.ModelViewSet):
             return serializers.TitleListSerializer
         return serializers.TitleFullSerializer
 
-    def response_data(self, data):
-        """Заменяет в данных сериализатора поля genre и category,
-        добавляя туда объекты их сериализаторов."""
-        genres = data.pop('genre')
-        genre_list = list()
-        for genre in genres:
-            genre_obj = Genre.objects.get(slug=genre)
-            genre_list.append(serializers.GenreSerializer(genre_obj).data)
-        data['genre'] = genre_list
-        category = data.pop('category')
-        category_obj = Category.objects.get(slug=category)
-        data['category'] = serializers.CategorySerializer(category_obj).data
-        return data
+    # def response_data(self, data):
+    #     """Заменяет в данных сериализатора поля genre и category,
+    #     добавляя туда объекты их сериализаторов."""
+    #     genres = data.pop('genre')
+    #     genre_list = list()
+    #     for genre in genres:
+    #         genre_obj = Genre.objects.get(slug=genre)
+    #         genre_list.append(serializers.GenreSerializer(genre_obj).data)
+    #     data['genre'] = genre_list
+    #     category = data.pop('category')
+    #     category_obj = Category.objects.get(slug=category)
+    #     data['category'] = serializers.CategorySerializer(category_obj).data
+    #     return data
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        response_data = self.response_data(serializer.data)
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            response_data, status=status.HTTP_201_CREATED, headers=headers
-        )
+    # def create(self, request, *args, **kwargs):
+    #     serializer = self.get_serializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     self.perform_create(serializer)
+    #     response_data = self.response_data(serializer.data)
+    #     headers = self.get_success_headers(serializer.data)
+    #     return Response(
+    #         response_data, status=status.HTTP_201_CREATED, headers=headers
+    #     )
 
 
 class BaseForGenreAndCategoryViewSet(
