@@ -74,7 +74,7 @@ class Title(models.Model):
     class Meta:
         verbose_name = 'произведение'
         verbose_name_plural = 'Произведения'
-    
+
 
 class GenreTitle(models.Model):
     title = models.ForeignKey(

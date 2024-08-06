@@ -1,16 +1,9 @@
-import os
 from pathlib import Path
 from datetime import timedelta
-
-#from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-# load_dotenv()
-# secret_key = os.getenv('SECRET_KEY')
-# SECRET_KEY = secret_key
 SECRET_KEY = 'p&l%385148kslhtyn^##a1)ilz@4zqj=rq&agdol^##zgl9(vs'
 
 # SECURITY WARNING: don't run with debug turned on in production!
