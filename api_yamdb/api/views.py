@@ -1,5 +1,5 @@
-from django.shortcuts import get_object_or_404
 from django.db.models import Avg
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
 from rest_framework.filters import SearchFilter
@@ -13,9 +13,9 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from . import permisions, serializers
 from .filters import TitleFilter
 from .mixin import CreateListDestroyMixin
-from . import permisions, serializers
 from reviews.models import Category, Genre, Review, Title, User
 
 
@@ -236,11 +236,3 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         review = self.get_review()
         serializer.save(author=self.request.user, review=review)
-
-    # def update(self, request, *args, **kwargs):
-    #     # Запрет PUT-запросов
-    #     if request.method == 'PUT':
-    #         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    #     else:
-    #         # Разрешение PATCH-запросов
-    #         return super().update(request, *args, **kwargs)

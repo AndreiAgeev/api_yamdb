@@ -1,16 +1,20 @@
-from random import randint
 from datetime import datetime
+from random import randint
+from smtplib import SMTPException
 
 from django.core.mail import send_mail
 from django.db.utils import IntegrityError
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainSerializer
+from rest_framework.exceptions import APIException
 from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework.exceptions import ValidationError
 
 from reviews.models import Category, Comments, Genre, Review, Title, User
-from .permisions import STAFF_ROLES
+
+
+EMAIL_SUBJECT = 'Код подтверждения'
+EMAIL_SOURCE = 'from yamdb@mail.com'
+EMAIL_ERROR = 'Произошла следующая ошибка при попытке отправки письма:\n'
 
 
 class ValidateUsernameMixin:
@@ -68,38 +72,30 @@ class SignUpSerializer(ValidateUsernameMixin, serializers.ModelSerializer):
         """
         confirmation_code = randint(100000, 999999)
         message = f'Код для получения токена - {confirmation_code}'
-        send_mail(
-            'Код подтверждения',
-            message,
-            'from yamdb@mail.com',
-            (recipient_email,),
-            fail_silently=False
-        )
+        try:
+            send_mail(
+                EMAIL_SUBJECT,
+                message,
+                EMAIL_SOURCE,
+                (recipient_email,),
+                fail_silently=True
+            )
+        except SMTPException as error:
+            raise APIException(EMAIL_ERROR + error)
         return confirmation_code
 
 
-class GetTokenSerializer(TokenObtainSerializer):
+class GetTokenSerializer(serializers.Serializer):
     """Сериализатор для получения пользователем Access Token."""
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-
-        self.fields[self.username_field] = serializers.CharField(
-            write_only=True
-        )
-        self.fields['confirmation_code'] = serializers.IntegerField()
-        self.fields['password'] = serializers.CharField(read_only=True)
+    username = serializers.CharField(write_only=True)
+    confirmation_code = serializers.IntegerField(write_only=True)
 
     def validate(self, data):
         user = get_object_or_404(User, username=data['username'])
         if data['confirmation_code'] != user.confirmation_code:
             raise serializers.ValidationError('Неверный код подтверждения')
-        data['token'] = str(self.get_token(user))
+        data['token'] = str(AccessToken.for_user(user))
         return data
-
-    @classmethod
-    def get_token(cls, user):
-        return AccessToken.for_user(user)
 
 
 class AdminUsersSerializer(ValidateUsernameMixin, BaseUserSerializer):
@@ -107,13 +103,6 @@ class AdminUsersSerializer(ValidateUsernameMixin, BaseUserSerializer):
 
     class Meta(BaseUserSerializer.Meta):
         read_only_fields = ('password',)
-
-    def update(self, instance, validated_data):
-        super().update(instance, validated_data)
-        if validated_data.get('role') in STAFF_ROLES:
-            instance.is_staff = True
-            instance.save()
-        return instance
 
 
 class UserSerializer(ValidateUsernameMixin, BaseUserSerializer):
@@ -206,5 +195,5 @@ class ReviewSerializer(AuthorForReviewAndCommentSerializer):
         try:
             return super().create(validated_data)
         except IntegrityError:
-            raise ValidationError(
+            raise serializers.ValidationError(
                 'Нельзя оставить более одного отзыва одним автором')

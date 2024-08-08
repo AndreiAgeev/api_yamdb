@@ -1,7 +1,5 @@
 from rest_framework import permissions
 
-STAFF_ROLES = ('moderator', 'admin')
-
 
 class UserStaffOrReadOnly(permissions.BasePermission):
     """Даёт следующие доступы:
@@ -20,7 +18,7 @@ class UserStaffOrReadOnly(permissions.BasePermission):
         return (
             request.method in permissions.SAFE_METHODS
             or obj.author == request.user
-            or request.user.role in STAFF_ROLES
+            or request.user.is_staff
             or request.user.is_superuser
         )
 
@@ -37,7 +35,7 @@ class AdminOrReadOnly(permissions.BasePermission):
 
         return (
             request.method in permissions.SAFE_METHODS
-            or request.user.role == STAFF_ROLES[1]
+            or request.user.is_admin
             or request.user.is_superuser
         )
 
@@ -50,7 +48,7 @@ class AdminOrReadOnly(permissions.BasePermission):
 
         return (
             request.method in permissions.SAFE_METHODS
-            or request.user.role == STAFF_ROLES[1]
+            or request.user.is_admin
             or request.user.is_superuser
         )
 
@@ -63,7 +61,7 @@ class AdminOnly(permissions.BasePermission):
             return False
 
         return (
-            request.user.role == STAFF_ROLES[1]
+            request.user.is_admin
             or request.user.is_superuser
         )
 
@@ -72,6 +70,6 @@ class AdminOnly(permissions.BasePermission):
             return False
 
         return (
-            request.user.role == STAFF_ROLES[1]
+            request.user.is_admin
             or request.user.is_superuser
         )

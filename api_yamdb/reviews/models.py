@@ -1,6 +1,6 @@
 from django.contrib.auth.models import AbstractUser
-from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db import models
 
 
 USER_ROLES = (
@@ -8,6 +8,8 @@ USER_ROLES = (
     ('moderator', 'Модератор'),
     ('admin', 'Админ')
 )
+
+STAFF_ROLES = ('moderator', 'admin')
 
 
 class User(AbstractUser):
@@ -23,6 +25,21 @@ class User(AbstractUser):
         null=True
     )
     email = models.EmailField(('email address'), unique=True, max_length=254)
+
+    def save(self, **kwargs):
+        # Если роль admin или moderator, то у пользователя is_staff меняется
+        # на True. Если роль user - то is_staff меняется на False
+        if self.role in STAFF_ROLES:
+            self.is_staff = True
+        else:
+            self.is_staff = False
+        super().save()
+
+    @property
+    def is_admin(self):
+        if self.role == STAFF_ROLES[1]:
+            return True
+        return False
 
 
 class Category(models.Model):
@@ -74,7 +91,7 @@ class Title(models.Model):
     class Meta:
         verbose_name = 'произведение'
         verbose_name_plural = 'Произведения'
-    
+
 
 class GenreTitle(models.Model):
     title = models.ForeignKey(
