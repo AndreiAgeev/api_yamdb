@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
@@ -13,7 +14,7 @@ STAFF_ROLES = ('moderator', 'admin')
 
 
 class User(AbstractUser):
-    bio = models.TextField('Биография', null=True, blank=True)
+    bio = models.TextField('Биография', blank=True)
     role = models.CharField(
         'Роль пользователя',
         choices=USER_ROLES,
@@ -68,13 +69,20 @@ class Genre(models.Model):
 
 class Title(models.Model):
     name = models.CharField('Название', max_length=256)
-    year = models.IntegerField('Год')
+    year = models.IntegerField(
+        'Год', validators=[
+            MaxValueValidator(
+                limit_value=datetime.today().year,
+                message='Нельзя добавлять произведения, которые еще не вышли.'
+            )
+        ]
+    )
     description = models.TextField('Описание', blank=True)
     genre = models.ManyToManyField(
         Genre,
         through='GenreTitle',
         verbose_name='Жанр',
-        related_name='titles'
+        related_name='titles',
     )
     rating = models.IntegerField(blank=True, null=True)
     category = models.ForeignKey(
@@ -96,17 +104,13 @@ class Title(models.Model):
 class GenreTitle(models.Model):
     title = models.ForeignKey(
         Title,
-        blank=True,
-        null=True,
         on_delete=models.CASCADE,
         related_name='titles',
         verbose_name='Произведение'
     )
     genre = models.ForeignKey(
         Genre,
-        blank=True,
-        null=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='genres',
         verbose_name='Жанр'
     )
