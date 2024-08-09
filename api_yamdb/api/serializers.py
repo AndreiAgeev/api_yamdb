@@ -5,7 +5,7 @@ from smtplib import SMTPException
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.exceptions import APIException
 from rest_framework_simplejwt.tokens import AccessToken
 
 from reviews.models import Category, Comments, Genre, Review, Title, User
@@ -162,6 +162,13 @@ class TitleSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate_genre(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                'Поле genre не может быть пустым'
+            )
+        return value
+
 
 class TitleReadSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
@@ -221,8 +228,10 @@ class ReviewSerializer(AuthorForReviewAndCommentSerializer):
         title_id = self.context['view'].kwargs['title_id']
         title = get_object_or_404(Title, pk=title_id)
 
-        if Review.objects.filter(author=author, title=title).exists() and \
-                (self.context['request'].method != 'PATCH'):
-            raise ValidationError(
+        if (
+            Review.objects.filter(author=author, title=title).exists()
+            and self.context['request'].method != 'PATCH'
+        ):
+            raise serializers.ValidationError(
                 'Нельзя оставить более одного отзыва одним автором')
         return data
