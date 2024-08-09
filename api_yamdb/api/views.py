@@ -145,6 +145,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     pk_url_kwarg = 'review_id'
     permission_classes = (permisions.UserStaffOrReadOnly,)
     pagination_class = LimitOffsetPagination
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head')
 
     def get_title(self):
         """Забираю необходимое произведение."""
@@ -179,19 +180,11 @@ class ReviewViewSet(viewsets.ModelViewSet):
             self.rating_calculating(self.get_title())
         return super().partial_update(request, *args, **kwargs)
 
-    def update(self, request, *args, **kwargs):
-        # Запрет PUT-запросов
-        if request.method == 'PUT':
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        else:
-            # Разрешение PATCH-запросов
-            return super().update(request, *args, **kwargs)
-
     def rating_calculating(self, title):
         """Пересчет рейтинга произведения."""
-        title = Title.objects.annotate(
-            average=Avg('reviews__score')).get(pk=title.pk)
-        title.rating = title.average
+        title.rating = Title.objects.annotate(
+            average=Avg('reviews__score')).get(pk=title.pk).average
+        # title.rating = title.average
         title.save()
 
 

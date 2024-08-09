@@ -162,6 +162,13 @@ class TitleSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate_genre(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                'Поле genre не может быть пустым'
+            )
+        return value
+
 
 class TitleReadSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
