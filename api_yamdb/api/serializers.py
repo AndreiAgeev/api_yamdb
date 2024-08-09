@@ -201,17 +201,11 @@ class CommentSerializer(AuthorForReviewAndCommentSerializer):
 
     def validate(self, data):
         """Валидация."""
-        title_id = self.context['view'].kwargs['title_id']
-
-        # Проверяем title_id и review_id
-        title = get_object_or_404(Title, pk=title_id)
-
-        # Проверяем текст комментария
         text = data.get('text')
         if not text:
             raise serializers.ValidationError(
-                'Текст комментария не может быть пустым.')
-
+                'Текст комментария не может быть пустым.'
+            )
         return data
 
 

@@ -16,7 +16,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from . import permisions, serializers
 from .filters import TitleFilter
 from .mixin import CreateListDestroyMixin
-from reviews.models import Category, Genre, Review, Title, User
+from reviews.models import Category, Genre, Title, User
 
 
 class SignUpViewSet(CreateModelMixin, GenericViewSet):
