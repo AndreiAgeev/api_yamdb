@@ -155,22 +155,28 @@ class ReviewViewSet(viewsets.ModelViewSet):
         title = self.get_title()
         return title.reviews.all()
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     def perform_create(self, serializer):
         title = self.get_title()
         serializer.save(title=title, author=self.request.user)
         # Пересчитываю значение рейтинга при создании отзыва
-        self.rating_calculating()
+        self.rating_calculating(title)
 
     def perform_destroy(self, instance):
         super().perform_destroy(instance)
         # Пересчитываю значение рейтинга при удалении отзыва
-        self.rating_calculating()
+        self.rating_calculating(self.get_title())
 
     def partial_update(self, request, *args, **kwargs):
         # Если при изменении отзыва (patch) пришла оценка -> перерасчет
         if 'score' in request.data:
             super().partial_update(request, *args, **kwargs)
-            self.rating_calculating()
+            self.rating_calculating(self.get_title())
         return super().partial_update(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
@@ -181,14 +187,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
             # Разрешение PATCH-запросов
             return super().update(request, *args, **kwargs)
 
-    def rating_calculating(self):
+    def rating_calculating(self, title):
         """Пересчет рейтинга произведения."""
-        title = self.get_title()
-        reviews = self.get_queryset()
-        if reviews.count() > 0:
-            title_rating = reviews.aggregate(average=Avg('score'))['average']
-            title.rating = title_rating
-            title.save()
+        title = Title.objects.annotate(
+            average=Avg('reviews__score')).get(pk=title.pk)
+        title.rating = title.average
+        title.save()
 
 
 class CommentViewSet(viewsets.ModelViewSet):

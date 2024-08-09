@@ -201,12 +201,14 @@ class ReviewSerializer(AuthorForReviewAndCommentSerializer):
         """Мета."""
 
         model = Review
-        fields = fields = ('id', 'text', 'author', 'score', 'pub_date')
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
 
-    def create(self, validated_data):
-        """Переопределяю create для обработки IntegrityError."""
-        try:
-            return super().create(validated_data)
-        except IntegrityError:
-            raise serializers.ValidationError(
+    def validate(self, data):
+        author = self.context['request'].user
+        title_id = self.context['view'].kwargs['title_id']
+        title = get_object_or_404(Title, pk=title_id)
+
+        if Review.objects.filter(author=author, title=title).exists():
+            raise ValidationError(
                 'Нельзя оставить более одного отзыва одним автором')
+        return data
