@@ -151,17 +151,17 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return title.reviews.all()
 
     def create(self, request, *args, **kwargs):
-        title = self.get_title()
-        author = self.request.user
-        if Review.objects.filter(author=author, title=title).exists():
-            return Response(
-                'Нельзя создать более 1 отзыва на произведение пользователем',
-                status=status.HTTP_400_BAD_REQUEST
-            )
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        if serializer.is_valid():
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED,
+                headers=headers)
+        else:
+            return Response(
+                serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def perform_create(self, serializer):
         title = self.get_title()

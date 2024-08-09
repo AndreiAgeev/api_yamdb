@@ -200,3 +200,12 @@ class ReviewSerializer(AuthorForReviewAndCommentSerializer):
 
         model = Review
         fields = ('id', 'text', 'author', 'score', 'pub_date')
+
+    def validate(self, data):
+        author = data.get('author')
+        title = data.get('title')
+
+        if Review.objects.filter(author=author, title=title).exists():
+            raise ValidationError(
+                'Нельзя оставить более одного отзыва одним автором')
+        return data
