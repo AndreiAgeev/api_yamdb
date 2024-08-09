@@ -184,7 +184,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
         """Пересчет рейтинга произведения."""
         title.rating = Title.objects.annotate(
             average=Avg('reviews__score')).get(pk=title.pk).average
-        # title.rating = title.average
         title.save()
 
 
@@ -199,8 +198,8 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_review(self):
         # Забираю отзыв.
-        review_id = self.kwargs['review_id']
-        return get_object_or_404(Review, pk=review_id)
+        title = get_object_or_404(Title, pk=self.kwargs['title_id'])
+        return get_object_or_404(title.reviews, pk=self.kwargs['review_id'])
 
     def get_queryset(self):
         review = self.get_review()
