@@ -209,7 +209,7 @@ class CommentSerializer(AuthorForReviewAndCommentSerializer):
         # Проверяем текст комментария
         text = data.get('text')
         if not text:
-            raise ValidationError('Текст комментария не может быть пустым.')
+            raise serializers.ValidationError('Текст комментария не может быть пустым.')
 
         return data
 
