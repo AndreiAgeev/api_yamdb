@@ -202,8 +202,9 @@ class ReviewSerializer(AuthorForReviewAndCommentSerializer):
         fields = ('id', 'text', 'author', 'score', 'pub_date')
 
     def validate(self, data):
-        author = data.get('author')
-        title = data.get('title')
+        author = self.context['request'].user
+        title_id = self.context['view'].kwargs['title_id']
+        title = get_object_or_404(Title, pk=title_id)
 
         if Review.objects.filter(author=author, title=title).exists():
             raise ValidationError(
