@@ -192,6 +192,20 @@ class CommentSerializer(AuthorForReviewAndCommentSerializer):
         model = Comments
         fields = ('id', 'text', 'author', 'pub_date')
 
+    def validate(self, data):
+        """Валидация."""
+        title_id = self.context['view'].kwargs['title_id']
+
+        # Проверяем title_id и review_id
+        title = get_object_or_404(Title, pk=title_id)
+
+        # Проверяем текст комментария
+        text = data.get('text')
+        if not text:
+            raise ValidationError('Текст комментария не может быть пустым.')
+
+        return data
+
 
 class ReviewSerializer(AuthorForReviewAndCommentSerializer):
     """Сериализатор для отзывов."""
