@@ -1,5 +1,5 @@
-from django.shortcuts import get_object_or_404
 from django.db.models import Avg
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
 from rest_framework.filters import SearchFilter
@@ -13,10 +13,10 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from . import permisions, serializers
 from .filters import TitleFilter
 from .mixin import CreateListDestroyMixin
-from . import permisions, serializers
-from reviews.models import Category, Genre, Review, Title, User
+from reviews.models import Category, Genre, Title, User
 
 
 class SignUpViewSet(CreateModelMixin, GenericViewSet):
@@ -114,32 +114,8 @@ class TitleViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         if self.action == 'list' or self.action == 'retrieve':
-            return serializers.TitleListSerializer
-        return serializers.TitleFullSerializer
-
-    def response_data(self, data):
-        """Заменяет в данных сериализатора поля genre и category,
-        добавляя туда объекты их сериализаторов."""
-        genres = data.pop('genre')
-        genre_list = list()
-        for genre in genres:
-            genre_obj = Genre.objects.get(slug=genre)
-            genre_list.append(serializers.GenreSerializer(genre_obj).data)
-        data['genre'] = genre_list
-        category = data.pop('category')
-        category_obj = Category.objects.get(slug=category)
-        data['category'] = serializers.CategorySerializer(category_obj).data
-        return data
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        response_data = self.response_data(serializer.data)
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            response_data, status=status.HTTP_201_CREATED, headers=headers
-        )
+            return serializers.TitleReadSerializer
+        return serializers.TitleSerializer
 
 
 class BaseForGenreAndCategoryViewSet(
@@ -169,6 +145,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     pk_url_kwarg = 'review_id'
     permission_classes = (permisions.UserStaffOrReadOnly,)
     pagination_class = LimitOffsetPagination
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head')
 
     def get_title(self):
         """Забираю необходимое произведение."""
@@ -179,40 +156,35 @@ class ReviewViewSet(viewsets.ModelViewSet):
         title = self.get_title()
         return title.reviews.all()
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     def perform_create(self, serializer):
         title = self.get_title()
         serializer.save(title=title, author=self.request.user)
         # Пересчитываю значение рейтинга при создании отзыва
-        self.rating_calculating()
+        self.rating_calculating(title)
 
     def perform_destroy(self, instance):
         super().perform_destroy(instance)
         # Пересчитываю значение рейтинга при удалении отзыва
-        self.rating_calculating()
+        self.rating_calculating(self.get_title())
 
     def partial_update(self, request, *args, **kwargs):
         # Если при изменении отзыва (patch) пришла оценка -> перерасчет
         if 'score' in request.data:
             super().partial_update(request, *args, **kwargs)
-            self.rating_calculating()
+            self.rating_calculating(self.get_title())
         return super().partial_update(request, *args, **kwargs)
 
-    def update(self, request, *args, **kwargs):
-        # Запрет PUT-запросов
-        if request.method == 'PUT':
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        else:
-            # Разрешение PATCH-запросов
-            return super().update(request, *args, **kwargs)
-
-    def rating_calculating(self):
+    def rating_calculating(self, title):
         """Пересчет рейтинга произведения."""
-        title = self.get_title()
-        reviews = self.get_queryset()
-        if reviews.count() > 0:
-            title_rating = reviews.aggregate(average=Avg('score'))['average']
-            title.rating = title_rating
-            title.save()
+        title.rating = Title.objects.annotate(
+            average=Avg('reviews__score')).get(pk=title.pk).average
+        title.save()
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -226,8 +198,8 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_review(self):
         # Забираю отзыв.
-        review_id = self.kwargs['review_id']
-        return get_object_or_404(Review, pk=review_id)
+        title = get_object_or_404(Title, pk=self.kwargs['title_id'])
+        return get_object_or_404(title.reviews, pk=self.kwargs['review_id'])
 
     def get_queryset(self):
         review = self.get_review()
@@ -236,11 +208,3 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         review = self.get_review()
         serializer.save(author=self.request.user, review=review)
-
-    # def update(self, request, *args, **kwargs):
-    #     # Запрет PUT-запросов
-    #     if request.method == 'PUT':
-    #         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    #     else:
-    #         # Разрешение PATCH-запросов
-    #         return super().update(request, *args, **kwargs)

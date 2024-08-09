@@ -1,6 +1,7 @@
+from datetime import datetime
 from django.contrib.auth.models import AbstractUser
-from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db import models
 
 
 USER_ROLES = (
@@ -9,9 +10,11 @@ USER_ROLES = (
     ('admin', 'Админ')
 )
 
+STAFF_ROLES = ('moderator', 'admin')
+
 
 class User(AbstractUser):
-    bio = models.TextField('Биография', null=True, blank=True)
+    bio = models.TextField('Биография', blank=True)
     role = models.CharField(
         'Роль пользователя',
         choices=USER_ROLES,
@@ -23,6 +26,21 @@ class User(AbstractUser):
         null=True
     )
     email = models.EmailField(('email address'), unique=True, max_length=254)
+
+    def save(self, **kwargs):
+        # Если роль admin или moderator, то у пользователя is_staff меняется
+        # на True. Если роль user - то is_staff меняется на False
+        if self.role in STAFF_ROLES:
+            self.is_staff = True
+        else:
+            self.is_staff = False
+        super().save()
+
+    @property
+    def is_admin(self):
+        if self.role == STAFF_ROLES[1]:
+            return True
+        return False
 
 
 class Category(models.Model):
@@ -51,13 +69,20 @@ class Genre(models.Model):
 
 class Title(models.Model):
     name = models.CharField('Название', max_length=256)
-    year = models.IntegerField('Год')
+    year = models.IntegerField(
+        'Год', validators=[
+            MaxValueValidator(
+                limit_value=datetime.today().year,
+                message='Нельзя добавлять произведения, которые еще не вышли.'
+            )
+        ]
+    )
     description = models.TextField('Описание', blank=True)
     genre = models.ManyToManyField(
         Genre,
         through='GenreTitle',
         verbose_name='Жанр',
-        related_name='titles'
+        related_name='titles',
     )
     rating = models.IntegerField(blank=True, null=True)
     category = models.ForeignKey(
@@ -79,17 +104,13 @@ class Title(models.Model):
 class GenreTitle(models.Model):
     title = models.ForeignKey(
         Title,
-        blank=True,
-        null=True,
         on_delete=models.CASCADE,
         related_name='titles',
         verbose_name='Произведение'
     )
     genre = models.ForeignKey(
         Genre,
-        blank=True,
-        null=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='genres',
         verbose_name='Жанр'
     )
@@ -112,7 +133,7 @@ class Review(models.Model):
     score = models.IntegerField(
         'Оценка',
         validators=[
-            MinValueValidator(0),
+            MinValueValidator(1),
             MaxValueValidator(10)
         ])
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
