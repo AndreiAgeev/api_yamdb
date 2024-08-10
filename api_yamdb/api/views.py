@@ -105,7 +105,8 @@ class UserViewSet(RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
+    queryset = Title.objects.select_related('category').prefetch_related(
+        'genre').annotate(rating=Avg('reviews__score'))
     permission_classes = (permisions.AdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
@@ -159,36 +160,26 @@ class ReviewViewSet(viewsets.ModelViewSet):
         title = self.get_title()
         serializer.save(title=title, author=self.request.user)
         # Пересчитываю значение рейтинга при создании отзыва
-        self.rating_calculating()
+        # self.rating_calculating(title)
 
-    def perform_destroy(self, instance):
-        super().perform_destroy(instance)
-        # Пересчитываю значение рейтинга при удалении отзыва
-        self.rating_calculating()
+    # def perform_destroy(self, instance):
+    #     super().perform_destroy(instance)
+    #     # Пересчитываю значение рейтинга при удалении отзыва
+    #     self.rating_calculating(self.get_title())
 
-    def partial_update(self, request, *args, **kwargs):
-        # Если при изменении отзыва (patch) пришла оценка -> перерасчет
-        if 'score' in request.data:
-            super().partial_update(request, *args, **kwargs)
-            self.rating_calculating()
-        return super().partial_update(request, *args, **kwargs)
+    # def partial_update(self, request, *args, **kwargs):
+    #     # Если при изменении отзыва (patch) пришла оценка -> перерасчет
+    #     if 'score' in request.data:
+    #         super().partial_update(request, *args, **kwargs)
+    #         self.rating_calculating(self.get_title())
+    #     return super().partial_update(request, *args, **kwargs)
 
-    def update(self, request, *args, **kwargs):
-        # Запрет PUT-запросов
-        if request.method == 'PUT':
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        else:
-            # Разрешение PATCH-запросов
-            return super().update(request, *args, **kwargs)
-
-    def rating_calculating(self):
-        """Пересчет рейтинга произведения."""
-        title = self.get_title()
-        reviews = self.get_queryset()
-        if reviews.count() > 0:
-            title_rating = reviews.aggregate(average=Avg('score'))['average']
-            title.rating = title_rating
-            title.save()
+    # def rating_calculating(self, title):
+    #     """Пересчет рейтинга произведения."""
+    #     title.rating = Title.objects.annotate(
+    #         average=Avg('reviews__score')).get(pk=title.pk).average
+    #     # title.rating = title.average
+    #     title.save()
 
 
 class CommentViewSet(viewsets.ModelViewSet):
