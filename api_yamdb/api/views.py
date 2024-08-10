@@ -105,7 +105,8 @@ class UserViewSet(RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
+    queryset = Title.objects.select_related('category').prefetch_related(
+        'genre').annotate(rating=Avg('reviews__score'))
     permission_classes = (permisions.AdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
@@ -149,42 +150,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def get_title(self):
         """Забираю необходимое произведение."""
-        title_id = self.kwargs['title_id']
-        return get_object_or_404(Title, pk=title_id)
+        return get_object_or_404(Title, pk=self.kwargs['title_id'])
 
     def get_queryset(self):
-        title = self.get_title()
-        return title.reviews.all()
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
-        title = self.get_title()
-        serializer.save(title=title, author=self.request.user)
-        # Пересчитываю значение рейтинга при создании отзыва
-        self.rating_calculating(title)
-
-    def perform_destroy(self, instance):
-        super().perform_destroy(instance)
-        # Пересчитываю значение рейтинга при удалении отзыва
-        self.rating_calculating(self.get_title())
-
-    def partial_update(self, request, *args, **kwargs):
-        # Если при изменении отзыва (patch) пришла оценка -> перерасчет
-        if 'score' in request.data:
-            super().partial_update(request, *args, **kwargs)
-            self.rating_calculating(self.get_title())
-        return super().partial_update(request, *args, **kwargs)
-
-    def rating_calculating(self, title):
-        """Пересчет рейтинга произведения."""
-        title.rating = Title.objects.annotate(
-            average=Avg('reviews__score')).get(pk=title.pk).average
-        title.save()
+        serializer.save(title=self.get_title(), author=self.request.user)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -202,9 +174,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         return get_object_or_404(title.reviews, pk=self.kwargs['review_id'])
 
     def get_queryset(self):
-        review = self.get_review()
-        return review.comments.select_related('author')
+        return self.get_review().comments.select_related('author')
 
     def perform_create(self, serializer):
-        review = self.get_review()
-        serializer.save(author=self.request.user, review=review)
+        serializer.save(author=self.request.user, review=self.get_review())
