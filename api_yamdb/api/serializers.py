@@ -126,6 +126,7 @@ class GenreSerializer(serializers.ModelSerializer):
 
 
 class TitleSerializer(serializers.ModelSerializer):
+    rating = serializers.IntegerField(read_only=True)
     category = serializers.SlugRelatedField(
         queryset=Category.objects.all(),
         slug_field='slug'
@@ -143,17 +144,7 @@ class TitleSerializer(serializers.ModelSerializer):
         model = Title
 
     def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        genres = representation.pop('genre')
-        genre_list = list()
-        for genre in genres:
-            genre_obj = Genre.objects.get(slug=genre)
-            genre_list.append(GenreSerializer(genre_obj).data)
-        representation['genre'] = genre_list
-        category = representation.pop('category')
-        category_obj = Category.objects.get(slug=category)
-        representation['category'] = CategorySerializer(category_obj).data
-        return representation
+        return TitleReadSerializer(instance).data
 
     def validate_year(self, value):
         if value > datetime.today().year:
@@ -171,6 +162,7 @@ class TitleSerializer(serializers.ModelSerializer):
 
 
 class TitleReadSerializer(serializers.ModelSerializer):
+    rating = serializers.IntegerField(read_only=True, default=None)
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(read_only=True, many=True)
 
