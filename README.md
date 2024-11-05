@@ -33,11 +33,13 @@ source env/Scripts/activate
 Установить зависимости из файла requirements.txt:<br />
 *Для Linux:*
 ```
-python3 -m pip install --upgrade pip
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 *Для Windows:*
 ```
 python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 Выполнить миграции и запустить проект:<br />
 *Для Linux:*
